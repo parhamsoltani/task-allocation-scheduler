@@ -1,0 +1,56 @@
+{
+    "tasks": [
+      {"id": "T1", "cpu": 2, "ram": 4, "deadline": 3, "duration": 1},
+      {"id": "T2", "cpu": 1, "ram": 2, "deadline": 3, "duration": 1},
+      {"id": "T3", "cpu": 3, "ram": 3, "deadline": 5, "duration": 2}
+    ],
+    "nodes": [
+      {"id": "N1", "cpu_capacity": 5, "ram_capacity": 6},
+      {"id": "N2", "cpu_capacity": 6, "ram_capacity": 5},
+      {"id": "N3", "cpu_capacity": 4, "ram_capacity": 4}
+    ],
+    "exec_cost": {
+      "T1": {"N1": 4, "N2": 2, "N3": 5},
+      "T2": {"N1": 3, "N2": 4, "N3": 2},
+      "T3": {"N1": 2, "N2": 3, "N3": 4}
+    },
+    "time_slots": [0, 1, 2, 3, 4],
+    "node_capacity_per_time": {
+      "N1": {"0": 3, "1": 3, "2": 3, "3": 3, "4": 3},
+      "N2": {"0": 4, "1": 4, "2": 4, "3": 4, "4": 4},
+      "N3": {"0": 2, "1": 2, "2": 2, "3": 2, "4": 2}
+    },
+    "dependencies": [],
+    "previous_schedule": {
+      "T1": {"node": "N2", "start_time": 0},
+      "T2": {"node": "N1", "start_time": 1},
+      "T3": {"node": "N2", "start_time": 2}
+    },
+    "events": [
+      {
+        "type": "node_failure",
+        "node": "N2",
+        "time": 2
+      },
+      {
+        "type": "new_task",
+        "time": 1,
+        "task": {
+          "id": "T4",
+          "cpu": 2,
+          "ram": 2,
+          "deadline": 4,
+          "duration": 1,
+          "exec_cost": {
+            "N1": 3,
+            "N3": 2
+          }
+        }
+      },
+      {
+        "type": "capacity_change",
+        "time": 3,
+        "N1": {"3": 2, "4": 2}
+      }
+    ]
+  }

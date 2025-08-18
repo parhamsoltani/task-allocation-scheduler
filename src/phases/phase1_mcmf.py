@@ -1,0 +1,62 @@
+from typing import List, Dict, Tuple
+from ..core.models import Task, Node, Schedule
+from ..core.graph_builder import FlowGraphBuilder
+from ..algorithms.mcmf import MinCostMaxFlow
+
+class Phase1MCMF:
+    def __init__(self):
+        self.graph_builder = FlowGraphBuilder()
+        self.mcmf_solver = MinCostMaxFlow()
+        
+    def run(self, tasks: List[Task], nodes: List[Node],
+            exec_cost: Dict[str, Dict[str, float]]) -> Schedule:
+        """
+        Phase 1: Initial task-to-node allocation using MCMF
+        """
+        
+        # Build flow graph
+        graph = self.graph_builder.build_basic_flow_graph(tasks, nodes, exec_cost)
+        
+        # Solve MCMF
+        assignments, total_cost = self.mcmf_solver.solve(graph)
+        
+        # Convert to Assignment objects
+        assignment_objects = {}
+        for task_id, node_id in assignments.items():
+            assignment_objects[task_id] = {
+                'node': node_id,
+                'start_time': None  # Will be set in Phase 2
+            }
+        
+        return Schedule(
+            assignments=assignment_objects,
+            total_cost=total_cost,
+            valid=len(assignments) == len(tasks)
+        )
+    
+    def validate_solution(self, schedule: Schedule, tasks: List[Task], 
+                         nodes: List[Node]) -> bool:
+        """Validate that the solution respects all constraints"""
+        
+        # Check all tasks are assigned
+        if len(schedule.assignments) != len(tasks):
+            return False
+        
+        # Check node capacities
+        node_usage = {node.id: {'cpu': 0, 'ram': 0} for node in nodes}
+        
+        for task in tasks:
+            if task.id not in schedule.assignments:
+                return False
+            
+            node_id = schedule.assignments[task.id]['node']
+            node_usage[node_id]['cpu'] += task.cpu
+            node_usage[node_id]['ram'] += task.ram
+        
+        for node in nodes:
+            if node_usage[node.id]['cpu'] > node.cpu_capacity:
+                return False
+            if node_usage[node.id]['ram'] > node.ram_capacity:
+                return False
+        
+        return True

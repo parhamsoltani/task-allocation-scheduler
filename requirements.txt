@@ -1,0 +1,6 @@
+networkx>=2.8
+numpy>=1.21.0
+ortools>=9.4.0
+dataclasses>=0.6
+typing-extensions>=4.0.0
+pytest>=7.0.0

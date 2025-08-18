@@ -1,0 +1,15 @@
+{
+    "node": "N1",
+    "assigned_tasks": [
+      {"id": "T1", "cpu": 2, "ram": 2, "duration": 1, "deadline": 2},
+      {"id": "T3", "cpu": 2, "ram": 1, "duration": 2, "deadline": 4},
+      {"id": "T4", "cpu": 1, "ram": 1, "duration": 1, "deadline": 3}
+    ],
+    "resource_per_time": {
+      "0": {"cpu": 3, "ram": 3},
+      "1": {"cpu": 3, "ram": 3},
+      "2": {"cpu": 3, "ram": 3},
+      "3": {"cpu": 3, "ram": 3}
+    },
+    "time_slots": [0, 1, 2, 3]
+  }
