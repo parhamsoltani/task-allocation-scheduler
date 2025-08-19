@@ -61,8 +61,8 @@ setup(
         "": ["*.json", "*.yaml", "*.yml"],
     },
     project_urls={
-        "Bug Reports": "https://github.com/yourusername/task-allocation-scheduler/issues",
-        "Source": "https://github.com/yourusername/task-allocation-scheduler",
+        "Bug Reports": "https://github.com/parhamsoltani/task-allocation-scheduler/issues",
+        "Source": "https://github.com/parhamsoltani/task-allocation-scheduler",
         "Documentation": "https://task-allocation-scheduler.readthedocs.io/",
     },
 )
