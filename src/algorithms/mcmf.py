@@ -60,7 +60,6 @@ class MinCostMaxFlow:
 
         return assignments, total_cost
 
-
 class SuccessiveShortestPath:
     """Alternative MCMF implementation using successive shortest path"""
 

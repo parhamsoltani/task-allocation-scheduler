@@ -70,7 +70,6 @@ class Phase1MCMF:
             node_id = schedule.assignments[task.id]['node']
             if node_id not in node_usage:
                 return False
-
             node_usage[node_id]['cpu'] += task.cpu
             node_usage[node_id]['ram'] += task.ram
 
@@ -79,5 +78,5 @@ class Phase1MCMF:
                 return False
             if node_usage[node.id]['ram'] > node.ram_capacity:
                 return False
-
+        
         return True
