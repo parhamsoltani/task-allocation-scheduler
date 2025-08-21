@@ -15,32 +15,20 @@ class TaskAllocationScheduler:
         self.phase2 = Phase2Scheduling()
         self.phase3 = Phase3Dynamic()
         self.phase4 = Phase4LocalDP()
-        
+
     def load_input(self, filepath: str) -> Dict[str, Any]:
         """Load input from JSON file"""
         with open(filepath, 'r') as f:
             return json.load(f)
-        
-    def normalize_time_keys(obj: dict) -> dict:
-        """
-        Convert any dicts that have numeric-strings as keys (e.g. "0": 3)
-        into int keys. Works recursively for node_capacity_per_time and similar.
-        """
+
+    def _normalize_time_keys_in_map(self, m: dict) -> dict:
+        """Convert string numeric keys -> int for nested dicts like node_capacity_per_time."""
         out = {}
-        for k, v in obj.items():
-            # try convert key to int
-            try:
-                new_k = int(k)
-            except Exception:
-                new_k = k
-            # if value is a dict, recurse; else keep
-            if isinstance(v, dict):
-                out[new_k] = normalize_time_keys(v)
-            else:
-                out[new_k] = v
+        for node, times in m.items():
+            # times expected to be dict keys like "0","1",...
+            out[node] = {int(k): v for k, v in times.items()}
         return out
-    
-    
+
     def parse_tasks(self, task_data: list) -> list:
         """Parse task data into Task objects"""
         tasks = []
@@ -54,7 +42,7 @@ class TaskAllocationScheduler:
                 dependencies=t.get('dependencies', [])
             ))
         return tasks
-    
+
     def parse_nodes(self, node_data: list) -> list:
         """Parse node data into Node objects"""
         nodes = []
@@ -65,7 +53,7 @@ class TaskAllocationScheduler:
                 ram_capacity=n['ram_capacity']
             ))
         return nodes
-    
+
     def parse_events(self, event_data: list) -> list:
         """Parse dynamic events"""
         events = []
@@ -77,22 +65,13 @@ class TaskAllocationScheduler:
                 data=e.get('data', {})
             ))
         return events
-    
-    def _normalize_time_keys_in_map(m: dict) -> dict:
-        """Convert string numeric keys -> int for nested dicts like node_capacity_per_time."""
-        out = {}
-        for node, times in m.items():
-            # times expected to be dict keys like "0","1",...
-            out[node] = {int(k): v for k, v in times.items()}
-        return out
 
-    
     def run_phase1(self, input_file: str):
         """Execute Phase 1: Initial MCMF allocation"""
         print("=" * 50)
         print("PHASE 1: Initial Task Allocation using MCMF")
         print("=" * 50)
-        
+
         data = self.load_input(input_file)
         if 'node_capacity_per_time' in data:
             data['node_capacity_per_time'] = {
@@ -102,9 +81,9 @@ class TaskAllocationScheduler:
         tasks = self.parse_tasks(data['tasks'])
         nodes = self.parse_nodes(data['nodes'])
         exec_cost = data['exec_cost']
-        
+
         result = self.phase1.run(tasks, nodes, exec_cost)
-        
+
         print(f"Total tasks: {len(tasks)}")
         print(f"Total nodes: {len(nodes)}")
         print(f"Assignments made: {len(result.assignments)}")
@@ -113,15 +92,15 @@ class TaskAllocationScheduler:
         print("\nAssignments:")
         for task_id, assignment in result.assignments.items():
             print(f"  {task_id} -> {assignment['node']}")
-        
+
         return result
-    
+
     def run_phase2(self, input_file: str, phase1_result=None):
         """Execute Phase 2: Time-aware scheduling"""
         print("\n" + "=" * 50)
         print("PHASE 2: Time-Aware Scheduling")
         print("=" * 50)
-        
+
         data = self.load_input(input_file)
         if 'node_capacity_per_time' in data:
             data['node_capacity_per_time'] = {
@@ -134,37 +113,37 @@ class TaskAllocationScheduler:
         time_slots = data.get('time_slots', list(range(10)))
         node_capacity_per_time = data.get('node_capacity_per_time', {})
         if node_capacity_per_time:
-            node_capacity_per_time = _normalize_time_keys_in_map(node_capacity_per_time)
+            node_capacity_per_time = self._normalize_time_keys_in_map(node_capacity_per_time)
         dependencies = [(d['before'], d['after']) for d in data.get('dependencies', [])]
-        
+
         # Use Phase 1 assignments if available
         initial_assignments = None
         if phase1_result:
             initial_assignments = {
-                task_id: assignment['node'] 
+                task_id: assignment['node']
                 for task_id, assignment in phase1_result.assignments.items()
             }
-        
+
         result = self.phase2.run(
             tasks, nodes, exec_cost, time_slots,
             node_capacity_per_time, dependencies, initial_assignments
         )
-        
+
         print(f"Scheduled tasks: {len(result.assignments)}")
         print(f"Total cost: {result.total_cost}")
         print(f"Valid schedule: {result.valid}")
         print("\nSchedule:")
         for task_id, assignment in result.assignments.items():
             print(f"  {task_id} -> Node: {assignment['node']}, Start: {assignment['start_time']}")
-        
+
         return result
-    
+
     def run_phase3(self, input_file: str, current_schedule):
         """Execute Phase 3: Dynamic reallocation"""
         print("\n" + "=" * 50)
         print("PHASE 3: Dynamic Reallocation")
         print("=" * 50)
-        
+
         data = self.load_input(input_file)
         if 'node_capacity_per_time' in data:
             data['node_capacity_per_time'] = {
@@ -177,9 +156,9 @@ class TaskAllocationScheduler:
         time_slots = data.get('time_slots', list(range(10)))
         node_capacity_per_time = data.get('node_capacity_per_time', {})
         if node_capacity_per_time:
-            node_capacity_per_time = _normalize_time_keys_in_map(node_capacity_per_time)
+            node_capacity_per_time = self._normalize_time_keys_in_map(node_capacity_per_time)
         dependencies = [(d['before'], d['after']) for d in data.get('dependencies', [])]
-        
+
         # Parse events
         events = []
         if 'events' in data:
@@ -190,25 +169,25 @@ class TaskAllocationScheduler:
                     data=e
                 )
                 events.append(event)
-        
+
         result = self.phase3.run(
             current_schedule, tasks, nodes, exec_cost,
             events, time_slots, node_capacity_per_time, dependencies
         )
-        
+
         print(f"Reassigned tasks: {result['reassigned_tasks']}")
         print(f"Failed tasks: {result['failed_tasks']}")
         print(f"Total cost: {result['total_cost']}")
         print(f"Change penalty: {result['change_penalty']}")
-        
+
         return result
-    
+
     def run_phase4(self, input_file: str, assignments):
         """Execute Phase 4: Local DP scheduling"""
         print("\n" + "=" * 50)
         print("PHASE 4: Local DP Scheduling")
         print("=" * 50)
-        
+
         data = self.load_input(input_file)
         if 'node_capacity_per_time' in data:
             data['node_capacity_per_time'] = {
@@ -219,14 +198,14 @@ class TaskAllocationScheduler:
         nodes = self.parse_nodes(data['nodes'])
         time_slots = data.get('time_slots', list(range(10)))
         resource_per_time = data.get('resource_per_time', {})
-        
+
         # If running standalone Phase 4
         if 'node' in data:
             node_id = data['node']
             result = self.phase4.run(
                 node_id, tasks, resource_per_time, time_slots
             )
-            
+
             print(f"Node: {node_id}")
             print(f"Tasks scheduled: {len(result.task_schedules)}")
             print(f"Total idle time: {result.total_idle_time}")
@@ -243,50 +222,26 @@ class TaskAllocationScheduler:
             results = self.phase4.run_all_nodes(
                 assignments, tasks, nodes, all_resource_per_time, time_slots
             )
-            
+
             for node_id, result in results.items():
                 print(f"\nNode {node_id}:")
                 print(f"  Tasks: {len(result.task_schedules)}")
                 print(f"  Idle time: {result.total_idle_time}")
                 print(f"  Penalty: {result.penalty_cost}")
-        
+
         return result
-    
-    def run_all_phases(self, base_input_file: str):
-        """Run all phases in sequence"""
-        print("RUNNING ALL PHASES")
-        print("=" * 70)
-        
-        # Phase 1
-        phase1_result = self.run_phase1(base_input_file)
-        
-        # Phase 2
-        phase2_result = self.run_phase2(base_input_file, phase1_result)
-        
-        # Phase 3 (if events exist)
-        phase3_file = base_input_file.replace('input', 'phase3_input')
-        if Path(phase3_file).exists():
-            phase3_result = self.run_phase3(phase3_file, phase2_result)
-        
-        # Phase 4
-        phase4_file = base_input_file.replace('input', 'phase4_input')
-        if Path(phase4_file).exists():
-            phase4_result = self.run_phase4(phase4_file, phase2_result.assignments)
-        
-        print("\n" + "=" * 70)
-        print("ALL PHASES COMPLETED")
 
 def main():
     scheduler = TaskAllocationScheduler()
-    
+
     if len(sys.argv) < 2:
         print("Usage: python main.py <input_file> [phase]")
         print("Phases: 1, 2, 3, 4, or 'all' for all phases")
         sys.exit(1)
-    
+
     input_file = sys.argv[1]
     phase = sys.argv[2] if len(sys.argv) > 2 else 'all'
-    
+
     if phase == '1':
         scheduler.run_phase1(input_file)
     elif phase == '2':
@@ -299,8 +254,6 @@ def main():
         scheduler.run_phase3(input_file, phase2_result)
     elif phase == '4':
         scheduler.run_phase4(input_file, {})
-    else:
-        scheduler.run_all_phases(input_file)
 
 if __name__ == "__main__":
     main()
