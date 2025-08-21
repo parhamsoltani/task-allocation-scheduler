@@ -22,11 +22,21 @@ class Phase1MCMF:
         
         # Convert to Assignment objects
         assignment_objects = {}
-        for task_id, node_id in assignments.items():
+        for task_key, node_key in assignments.items():
+            # task_key might be 'task_T1' or 'task_T1_t0'
+            task_id = str(task_key).replace('task_', '')
+            if '_t' in task_id:
+                task_id = task_id.split('_t')[0]
+
+            node_id = str(node_key).replace('node_', '')
+            if '_t' in node_id:
+                node_id = node_id.split('_t')[0]
+
             assignment_objects[task_id] = {
                 'node': node_id,
-                'start_time': None  # Will be set in Phase 2
+                'start_time': None
             }
+
         
         return Schedule(
             assignments=assignment_objects,

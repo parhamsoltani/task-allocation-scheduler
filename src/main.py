@@ -20,6 +20,26 @@ class TaskAllocationScheduler:
         """Load input from JSON file"""
         with open(filepath, 'r') as f:
             return json.load(f)
+        
+    def normalize_time_keys(obj: dict) -> dict:
+        """
+        Convert any dicts that have numeric-strings as keys (e.g. "0": 3)
+        into int keys. Works recursively for node_capacity_per_time and similar.
+        """
+        out = {}
+        for k, v in obj.items():
+            # try convert key to int
+            try:
+                new_k = int(k)
+            except Exception:
+                new_k = k
+            # if value is a dict, recurse; else keep
+            if isinstance(v, dict):
+                out[new_k] = normalize_time_keys(v)
+            else:
+                out[new_k] = v
+        return out
+    
     
     def parse_tasks(self, task_data: list) -> list:
         """Parse task data into Task objects"""
@@ -58,6 +78,15 @@ class TaskAllocationScheduler:
             ))
         return events
     
+    def _normalize_time_keys_in_map(m: dict) -> dict:
+        """Convert string numeric keys -> int for nested dicts like node_capacity_per_time."""
+        out = {}
+        for node, times in m.items():
+            # times expected to be dict keys like "0","1",...
+            out[node] = {int(k): v for k, v in times.items()}
+        return out
+
+    
     def run_phase1(self, input_file: str):
         """Execute Phase 1: Initial MCMF allocation"""
         print("=" * 50)
@@ -65,6 +94,11 @@ class TaskAllocationScheduler:
         print("=" * 50)
         
         data = self.load_input(input_file)
+        if 'node_capacity_per_time' in data:
+            data['node_capacity_per_time'] = {
+                node: {int(t): cap for t, cap in times.items()}
+                for node, times in data['node_capacity_per_time'].items()
+            }
         tasks = self.parse_tasks(data['tasks'])
         nodes = self.parse_nodes(data['nodes'])
         exec_cost = data['exec_cost']
@@ -89,11 +123,18 @@ class TaskAllocationScheduler:
         print("=" * 50)
         
         data = self.load_input(input_file)
+        if 'node_capacity_per_time' in data:
+            data['node_capacity_per_time'] = {
+                node: {int(t): cap for t, cap in times.items()}
+                for node, times in data['node_capacity_per_time'].items()
+            }
         tasks = self.parse_tasks(data['tasks'])
         nodes = self.parse_nodes(data['nodes'])
         exec_cost = data['exec_cost']
         time_slots = data.get('time_slots', list(range(10)))
         node_capacity_per_time = data.get('node_capacity_per_time', {})
+        if node_capacity_per_time:
+            node_capacity_per_time = _normalize_time_keys_in_map(node_capacity_per_time)
         dependencies = [(d['before'], d['after']) for d in data.get('dependencies', [])]
         
         # Use Phase 1 assignments if available
@@ -125,11 +166,18 @@ class TaskAllocationScheduler:
         print("=" * 50)
         
         data = self.load_input(input_file)
+        if 'node_capacity_per_time' in data:
+            data['node_capacity_per_time'] = {
+                node: {int(t): cap for t, cap in times.items()}
+                for node, times in data['node_capacity_per_time'].items()
+            }
         tasks = self.parse_tasks(data['tasks'])
         nodes = self.parse_nodes(data['nodes'])
         exec_cost = data['exec_cost']
         time_slots = data.get('time_slots', list(range(10)))
         node_capacity_per_time = data.get('node_capacity_per_time', {})
+        if node_capacity_per_time:
+            node_capacity_per_time = _normalize_time_keys_in_map(node_capacity_per_time)
         dependencies = [(d['before'], d['after']) for d in data.get('dependencies', [])]
         
         # Parse events
@@ -162,6 +210,11 @@ class TaskAllocationScheduler:
         print("=" * 50)
         
         data = self.load_input(input_file)
+        if 'node_capacity_per_time' in data:
+            data['node_capacity_per_time'] = {
+                node: {int(t): cap for t, cap in times.items()}
+                for node, times in data['node_capacity_per_time'].items()
+            }
         tasks = self.parse_tasks(data.get('assigned_tasks', data['tasks']))
         nodes = self.parse_nodes(data['nodes'])
         time_slots = data.get('time_slots', list(range(10)))
