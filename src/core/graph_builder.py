@@ -11,6 +11,11 @@ class FlowGraphBuilder:
     def build_basic_flow_graph(self, tasks: List[Task], nodes: List[Node], 
                                exec_cost: Dict[str, Dict[str, float]]) -> nx.DiGraph:
         """Build basic flow graph for Phase 1 MCMF"""
+
+        # Source -> Tasks (capacity 1, cost 0)
+        # Tasks -> Nodes (capacity 1, cost = exec_cost)  
+        # Nodes -> Sink (capacity = node_limit, cost 0)   
+                                   
         self.graph.clear()
         
         # Add source and sink
