@@ -6,24 +6,77 @@ class MinCostMaxFlow:
     def __init__(self):
         self.solver = None
         
-    # Show this simplified version for explanation
-    def solve(self, graph):
-        """Core MCMF solving logic"""
-        # 1. Map nodes to indices for OR-Tools
-        node_to_idx = {node: idx for idx, node in enumerate(graph.nodes())}
+
+#    def solve(self, graph):
+#        """Core MCMF solving logic"""
+#        # 1. Map nodes to indices for OR-Tools
+#        node_to_idx = {node: idx for idx, node in enumerate(graph.nodes())}
         
         # 2. Add edges with capacity and cost
-        for u, v, data in graph.edges(data=True):
-            capacity = int(data.get('capacity', 1))
-            cost = int(data.get('weight', 0) * 100)
-            self.solver.AddArcWithCapacityAndUnitCost(
-                node_to_idx[u], node_to_idx[v], capacity, cost
-            )
+#        for u, v, data in graph.edges(data=True):
+#            capacity = int(data.get('capacity', 1))
+#            cost = int(data.get('weight', 0) * 100)
+#            self.solver.AddArcWithCapacityAndUnitCost(
+#                node_to_idx[u], node_to_idx[v], capacity, cost
+#            )
         
         # 3. Set supply/demand constraints
         # 4. Solve and extract assignments
-        return assignments, total_cost
+#        return assignments, total_cost
 
+    def solve(self, graph: nx.DiGraph) -> Tuple[Dict[str, str], float]:
+        """Solve MCMF using OR-Tools and return mapping of full node names (preserve _t suffixes)."""
+        self.solver = pywrapgraph.SimpleMinCostFlow()
+
+        # Map nodes to indices
+        node_to_idx = {node: idx for idx, node in enumerate(graph.nodes())}
+        idx_to_node = {idx: node for node, idx in node_to_idx.items()}
+
+        # Add edges to solver
+        for u, v, data in graph.edges(data=True):
+            cap = int(data.get('capacity', 1))
+            cost = int(data.get('weight', 0) * 100)
+            # OR-Tools requires non-negative capacities and integer costs
+            self.solver.AddArcWithCapacityAndUnitCost(
+                node_to_idx[u],
+                node_to_idx[v],
+                cap,
+                cost
+            )
+
+        # Set supplies/demands if present (OR-Tools expects positive supply, negative demand)
+        # We'll set node supplies if 'demand' attribute exists in graph.node
+        for node, data in graph.nodes(data=True):
+            if 'demand' in data:
+                # Flow supply = -demand (as used in builder: source d = -total_flow, sink d = total_flow)
+                supply = -int(data['demand'])
+                self.solver.SetNodeSupply(node_to_idx[node], supply)
+
+        status = self.solver.Solve()
+        if status != self.solver.OPTIMAL:
+            return {}, float('inf')
+
+        assignments = {}
+        total_cost = 0.0
+
+        # Iterate all arcs and collect those with positive flow
+        for arc in range(self.solver.NumArcs()):
+            flow = self.solver.Flow(arc)
+            if flow <= 0:
+                continue
+            tail_idx = self.solver.Tail(arc)
+            head_idx = self.solver.Head(arc)
+            tail = idx_to_node[tail_idx]
+            head = idx_to_node[head_idx]
+
+            # preserve full names (e.g., 'task_T1_t0' -> 'node_N1_t0')
+            if str(tail).startswith('task_') and str(head).startswith('node_'):
+                # keep full identifiers so caller (Phase2) can parse time suffixes
+                assignments[tail] = head
+                # unit cost returned from solver is in scaled ints
+                total_cost += (self.solver.UnitCost(arc) * flow) / 100.0
+
+        return assignments, total_cost
 
 class SuccessiveShortestPath:
     """Alternative MCMF implementation using successive shortest path"""
