@@ -1,7 +1,13 @@
 from typing import List, Dict, Tuple
-from ..core.models import Task, Node, Schedule
-from ..core.graph_builder import FlowGraphBuilder
-from ..algorithms.mcmf import MinCostMaxFlow
+import sys
+import os
+
+# Add the src directory to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from core.models import Task, Node, Schedule
+from core.graph_builder import FlowGraphBuilder
+from algorithms.mcmf import MinCostMaxFlow
 
 class Phase1MCMF:
     def __init__(self):
@@ -23,7 +29,7 @@ class Phase1MCMF:
         # Convert to Assignment objects
         assignment_objects = {}
         for task_key, node_key in assignments.items():
-            # task_key might be 'task_T1' or 'task_T1_t0'
+            # Handle both 'task_T1' and 'task_T1_t0' formats
             task_id = str(task_key).replace('task_', '')
             if '_t' in task_id:
                 task_id = task_id.split('_t')[0]
@@ -37,11 +43,10 @@ class Phase1MCMF:
                 'start_time': None
             }
 
-        
         return Schedule(
             assignments=assignment_objects,
             total_cost=total_cost,
-            valid=len(assignments) == len(tasks)
+            valid=len(assignment_objects) == len(tasks)
         )
     
     def validate_solution(self, schedule: Schedule, tasks: List[Task], 
@@ -60,6 +65,9 @@ class Phase1MCMF:
                 return False
             
             node_id = schedule.assignments[task.id]['node']
+            if node_id not in node_usage:
+                return False
+                
             node_usage[node_id]['cpu'] += task.cpu
             node_usage[node_id]['ram'] += task.ram
         
