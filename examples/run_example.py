@@ -9,7 +9,7 @@ from pathlib import Path
 
 def create_example_inputs():
     """Create example input files for testing"""
-    
+
     # Phase 1 & 2 combined input
     phase12_input = {
         "tasks": [
@@ -40,7 +40,7 @@ def create_example_inputs():
             {"before": "T2", "after": "T3"}
         ]
     }
-    
+
     # Phase 3 input (with events)
     phase3_input = phase12_input.copy()
     phase3_input["events"] = [
@@ -62,7 +62,7 @@ def create_example_inputs():
             }
         }
     ]
-    
+
     # Phase 4 input (single node)
     phase4_input = {
         "node": "N1",
@@ -79,66 +79,66 @@ def create_example_inputs():
         },
         "time_slots": [0, 1, 2, 3]
     }
-    
+
     return phase12_input, phase3_input, phase4_input
 
 def main():
     print("Task Allocation and Scheduling System - Example Run")
     print("=" * 60)
-    
+
     scheduler = TaskAllocationScheduler()
-    
+
     # Create example inputs
     phase12_input, phase3_input, phase4_input = create_example_inputs()
-    
+
     # Save to temp files
     import json
     import tempfile
-    
+
     with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
         json.dump(phase12_input, f, indent=2)
         phase12_file = f.name
-    
+
     with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
         json.dump(phase3_input, f, indent=2)
         phase3_file = f.name
-    
+
     with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
         json.dump(phase4_input, f, indent=2)
         phase4_file = f.name
-    
+
     try:
         # Run Phase 1
         print("\n" + "="*60)
         print("PHASE 1: Initial Allocation")
         print("="*60)
         phase1_result = scheduler.run_phase1(phase12_file)
-        
+
         # Run Phase 2
         print("\n" + "="*60)
         print("PHASE 2: Time-Aware Scheduling")
         print("="*60)
         phase2_result = scheduler.run_phase2(phase12_file, phase1_result)
-        
+
         # Run Phase 3
         print("\n" + "="*60)
         print("PHASE 3: Dynamic Reallocation")
         print("="*60)
         phase3_result = scheduler.run_phase3(phase3_file, phase2_result)
-        
+
         # Run Phase 4
         print("\n" + "="*60)
         print("PHASE 4: Local DP Scheduling")
         print("="*60)
         phase4_result = scheduler.run_phase4(phase4_file, {})
-        
+
     finally:
         # Clean up temp files
         import os
         os.unlink(phase12_file)
         os.unlink(phase3_file)
         os.unlink(phase4_file)
-    
+
     print("\n" + "="*60)
     print("Example run completed successfully!")
 
